@@ -26,6 +26,8 @@ const Dashboard = () => {
   const [search, setSearch] = useState('')
 
   const [users, setUsers] = useState<any[]>([])
+  const [pages, setPages] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const [userId, setUserId] = useState('')
   const [userName, setUserName] = useState('')
@@ -41,10 +43,11 @@ const Dashboard = () => {
   const [showAddUser, setShowAddUser] = useState(false)
   const [isAlertOpen, setIsAlertOpen] = useState(false)
 
-  const getUsers = async () => {
+  const getUsers = async (offset: number) => {
     try {
-      const { data } = await axios.get('http://localhost:4000/get-users')
-      setUsers(data)
+      const { data } = await axios.get(`http://localhost:4000/get-users?offset=${offset}`)
+      setUsers(data.users)
+      setPages(data.pages)
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -55,7 +58,7 @@ const Dashboard = () => {
   }
 
   useEffect(() => {
-    getUsers()
+    getUsers(0)
   }, [])
 
   const TABLE_HEADERS = ['User', 'ID Number', 'Date of Birth', 'Age', 'Gender']
@@ -83,7 +86,7 @@ const Dashboard = () => {
         addressPostalCode
       })
       setIsAlertOpen(true)
-      getUsers()
+      getUsers(0)
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -109,7 +112,7 @@ const Dashboard = () => {
         description: 'User added successfully',
         status: 'success'
       })
-      getUsers()
+      getUsers(0)
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -117,6 +120,32 @@ const Dashboard = () => {
         status: 'error'
       })
     }
+  }
+
+  const onSearch = async () => {
+    try {
+      const { data } = await axios.post('http://localhost:4000/search-users', {
+        search
+      })
+      setUsers(data)
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        status: 'error'
+      })
+    }
+  }
+
+  const onGetNextPage = (page: number) => {
+    let offset = 0
+    if (page === 1) {
+      offset = 0
+    } else {
+      offset = (page - 1) * 5
+    }
+    setCurrentPage(page)
+    getUsers(offset)
   }
 
   return (
@@ -130,7 +159,12 @@ const Dashboard = () => {
           borderRadius={10}
           height="40px"
         >
-          <Input placeholder="Search..." borderWidth={0} />
+          <Input
+            value={search}
+            onChange={({ target }) => setSearch(target.value)}
+            placeholder="Search..."
+            borderWidth={0}
+          />
           <Flex
             borderWidth={1}
             borderEndRadius={10}
@@ -138,6 +172,8 @@ const Dashboard = () => {
             alignItems="center"
             paddingLeft={1}
             paddingRight={1}
+            onClick={onSearch}
+            cursor="pointer"
           >
             <Text>Search</Text>
           </Flex>
@@ -157,7 +193,15 @@ const Dashboard = () => {
       </Card>
       <Flex>
         <Button leftIcon={<AiOutlineDoubleLeft />} />
-        <Button>1</Button>
+        {Array.from(Array(pages).keys()).map((page) => (
+          <Button
+            backgroundColor={currentPage === page + 1 ? 'blue.700' : undefined}
+            onClick={() => onGetNextPage(page + 1)}
+            key={page}
+          >
+            {page + 1}
+          </Button>
+        ))}
         <Button leftIcon={<AiOutlineDoubleRight />} />
       </Flex>
       <Flex width="100%" justifyContent="space-between" paddingTop={10}>
